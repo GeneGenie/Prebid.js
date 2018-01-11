@@ -299,7 +299,7 @@ $$PREBID_GLOBAL$$.requestBids = function ({ bidsBackHandler, timeout, adUnits, a
   }
 
   // for video-enabled adUnits, only request bids for bidders that support video
-  adUnits.filter(videoAdUnit).filter(hasNonVideoBidder).forEach(adUnit => {
+ /* adUnits.filter(videoAdUnit).filter(hasNonVideoBidder).forEach(adUnit => {
     const nonVideoBidders = adUnit.bids
       .filter(bid => !videoBidder(bid))
       .map(bid => bid.bidder);
@@ -307,7 +307,7 @@ $$PREBID_GLOBAL$$.requestBids = function ({ bidsBackHandler, timeout, adUnits, a
     utils.logWarn(utils.unsupportedBidderMessage(adUnit, nonVideoBidders));
     adUnit.bids = adUnit.bids.filter(videoBidder);
   });
-
+*/
   // for native-enabled adUnits, only request bids for bidders that support native
   adUnits.filter(nativeAdUnit).filter(hasNonNativeBidder).forEach(adUnit => {
     const nonNativeBidders = adUnit.bids
