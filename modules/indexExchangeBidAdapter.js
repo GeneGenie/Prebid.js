@@ -576,12 +576,14 @@ export function IndexExchangeAdapter() {
                             var bid = bidfactory.createBid(1, bidObj);
                             bid.cpm = currentCPM / 100;
                             bid.requestId = bidObj.bidId;
-                            bid.ttl = 20
                             bid.ad = indexObj[cpmAndSlotId][0];
                             bid.bidderCode = ADAPTER_CODE;
-                            bid.creativeId = 'asdasdas'
-                            bid.currency = 'USD'
-                            bid.netRevenue = true
+
+                            bid.creativeId = (Date.now+Math.random()).toString();
+                            bid.ttl = 300
+                            bid.currency = 'USD';
+                            bid.netRevenue = true;
+
                             bid.width = slotObj.width;
                             bid.height = slotObj.height;
                             bid.siteID = slotObj.siteID;
