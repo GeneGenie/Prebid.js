@@ -109,12 +109,21 @@ export const spec = {
     return bidRequests.map(bidRequest => {
       bidRequest.startTime = new Date().getTime();
 
+      let page_url = config.getConfig('pageUrl');
+      if (bidRequest.params.referrer) {
+        page_url = bidRequest.params.referrer;
+      } else if (!page_url) {
+        page_url = utils.getTopWindowUrl();
+      }
+
+      page_url = bidRequest.params.secure ? page_url.replace(/^http:/i, 'https:') : page_url;
+
       if (bidRequest.mediaType === 'video') {
         let params = bidRequest.params;
         let size = parseSizes(bidRequest);
 
         let data = {
-          page_url: !params.referrer ? utils.getTopWindowUrl() : params.referrer,
+          page_url,
           resolution: _getScreenResolution(),
           account_id: params.accountId,
           integration: INTEGRATION,
@@ -171,8 +180,7 @@ export const spec = {
         keywords,
         visitor,
         inventory,
-        userId,
-        referrer: pageUrl
+        userId
       } = bidRequest.params;
 
       // defaults
@@ -209,7 +217,7 @@ export const spec = {
 
       data.push(
         'rand', Math.random(),
-        'rf', !pageUrl ? utils.getTopWindowUrl() : pageUrl
+        'rf', page_url
       );
 
       data = data.concat(_getDigiTrustQueryParams());
@@ -269,8 +277,13 @@ export const spec = {
         cpm: ad.cpm || 0,
         dealId: ad.deal,
         ttl: 300, // 5 minutes
-        netRevenue: config.getConfig('rubicon.netRevenue') || false
+        netRevenue: config.getConfig('rubicon.netRevenue') || false,
+        rubicon: {
+          advertiserId: ad.advertiser,
+          networkId: ad.network
+        }
       };
+
       if (bidRequest.mediaType === 'video') {
         bid.width = bidRequest.params.video.playerWidth;
         bid.height = bidRequest.params.video.playerHeight;
