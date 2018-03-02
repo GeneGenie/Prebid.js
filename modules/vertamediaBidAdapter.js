@@ -4,13 +4,14 @@ import {VIDEO, BANNER} from 'src/mediaTypes';
 import {Renderer} from 'src/Renderer';
 import findIndex from 'core-js/library/fn/array/find-index';
 
-const URL = '//hb2.vertamedia.com/auction/';
+const URL = '//hb.adtelligent.com/auction/';
 const BIDDER_CODE = 'vertamedia';
 const OUTSTREAM = 'outstream';
 const DISPLAY = 'display';
 
 export const spec = {
   code: BIDDER_CODE,
+  aliases: ['adtelligent'],
   supportedMediaTypes: [VIDEO, BANNER],
   isBidRequestValid: function (bid) {
     return bid && bid.params && bid.params.aid;
@@ -146,7 +147,7 @@ function createBid(bidResponse, mediaType) {
 function newRenderer(requestId) {
   const renderer = Renderer.install({
     id: requestId,
-    url: '//player.vertamedia.com/outstream-unit/2.01/outstream.min.js',
+    url: '//player.adtelligent.com/outstream-unit/2.01/outstream.min.js',
     loaded: false
   });
 
