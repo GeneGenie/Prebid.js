@@ -147,7 +147,7 @@ function createBid(bidResponse, mediaType) {
 function newRenderer(requestId) {
   const renderer = Renderer.install({
     id: requestId,
-    url: '//player.adtelligent.com/outstream-unit/2.01/outstream.min.js',
+    url: '//player.adte.com/outstream-unit/2.01/outstream.min.js',
     loaded: false
   });
 

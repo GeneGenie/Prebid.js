@@ -1,14 +1,14 @@
-import Adapter from 'src/adapter';
-import bidfactory from 'src/bidfactory';
-import * as utils from 'src/utils';
-import { ajax } from 'src/ajax';
-import { STATUS, S2S } from 'src/constants';
-import { cookieSet } from 'src/cookie.js';
-import adaptermanager from 'src/adaptermanager';
-import { config } from 'src/config';
-import { VIDEO } from 'src/mediaTypes';
-import { isValid } from 'src/adapters/bidderFactory';
-import includes from 'core-js/library/fn/array/includes';
+import Adapter from "src/adapter";
+import bidfactory from "src/bidfactory";
+import * as utils from "src/utils";
+import {ajax} from "src/ajax";
+import {STATUS, S2S} from "src/constants";
+import {cookieSet} from "src/cookie.js";
+import adaptermanager from "src/adaptermanager";
+import {config} from "src/config";
+import {VIDEO} from "src/mediaTypes";
+import {isValid} from "src/adapters/bidderFactory";
+import includes from "core-js/library/fn/array/includes";
 
 const getConfig = config.getConfig;
 
@@ -72,7 +72,7 @@ function setS2sConfig(options) {
     if (availVendorDefaults.hasOwnProperty(vendor)) {
       // vendor keys will be set if either: the key was not specified by user
       // or if the user did not set their own distinct value (ie using the system default) to override the vendor
-      Object.keys(availVendorDefaults[vendor]).forEach(function(vendorKey) {
+      Object.keys(availVendorDefaults[vendor]).forEach(function (vendorKey) {
         if (s2sDefaultConfig[vendorKey] === options[vendorKey] || !includes(optionKeys, vendorKey)) {
           options[vendorKey] = availVendorDefaults[vendor][vendorKey];
         }
@@ -86,12 +86,12 @@ function setS2sConfig(options) {
   let keys = Object.keys(options);
 
   if (['accountId', 'bidders', 'endpoint'].filter(key => {
-    if (!includes(keys, key)) {
-      utils.logError(key + ' missing in server to server config');
-      return true;
-    }
-    return false;
-  }).length > 0) {
+      if (!includes(keys, key)) {
+        utils.logError(key + ' missing in server to server config');
+        return true;
+      }
+      return false;
+    }).length > 0) {
     return;
   }
 
@@ -115,17 +115,17 @@ function queueSync(bidderCodes) {
     bidders: bidderCodes
   });
   ajax(_s2sConfig.syncEndpoint, (response) => {
-    try {
-      response = JSON.parse(response);
-      response.bidder_status.forEach(bidder => doBidderSync(bidder.usersync.type, bidder.usersync.url, bidder.bidder));
-    } catch (e) {
-      utils.logError(e);
-    }
-  },
-  payload, {
-    contentType: 'text/plain',
-    withCredentials: true
-  });
+      try {
+        response = JSON.parse(response);
+        response.bidder_status.forEach(bidder => doBidderSync(bidder.usersync.type, bidder.usersync.url, bidder.bidder));
+      } catch (e) {
+        utils.logError(e);
+      }
+    },
+    payload, {
+      contentType: 'text/plain',
+      withCredentials: true
+    });
 }
 
 /**
@@ -170,6 +170,9 @@ const tryConvertString = tryConvertType.bind(null, 'string');
 const tryConvertNumber = tryConvertType.bind(null, 'number');
 
 const paramTypes = {
+  'adtelligent': {
+    'aid': tryConvertNumber,
+  },
   'appnexus': {
     'member': tryConvertString,
     'invCode': tryConvertString,
@@ -233,6 +236,7 @@ function _getDigiTrustQueryParams() {
     let digiTrustUser = window.DigiTrust && (config.getConfig('digiTrustId') || window.DigiTrust.getUser({member: 'T9QSFKPDN9'}));
     return (digiTrustUser && digiTrustUser.success && digiTrustUser.identity) || null;
   }
+
   let digiTrustId = getDigiTrustId();
   // Verify there is an ID and this user has not opted out
   if (!digiTrustId || (digiTrustId.privacy && digiTrustId.privacy.optout)) {
@@ -364,7 +368,7 @@ const LEGACY_PROTOCOL = {
           bidObject.currency = (bidObj.currency) ? bidObj.currency : DEFAULT_S2S_CURRENCY;
           bidObject.netRevenue = (bidObj.netRevenue) ? bidObj.netRevenue : DEFAULT_S2S_NETREVENUE;
 
-          bids.push({ adUnit: bidObj.code, bid: bidObject });
+          bids.push({adUnit: bidObj.code, bid: bidObject});
         });
       }
     }
@@ -396,7 +400,7 @@ const OPEN_RTB_PROTOCOL = {
       let banner;
       // default to banner if mediaTypes isn't defined
       if (utils.isEmpty(adUnit.mediaTypes)) {
-        const sizeObjects = adUnit.sizes.map(size => ({ w: size.w, h: size.h }));
+        const sizeObjects = adUnit.sizes.map(size => ({w: size.w, h: size.h}));
         banner = {format: sizeObjects};
       }
 
@@ -409,7 +413,7 @@ const OPEN_RTB_PROTOCOL = {
           const [ width, height ] = size.split('x');
           const w = parseInt(width, 10);
           const h = parseInt(height, 10);
-          return { w, h };
+          return {w, h};
         });
 
         banner = {format};
@@ -427,10 +431,14 @@ const OPEN_RTB_PROTOCOL = {
         return acc;
       }, {});
 
-      const imp = { id: adUnit.code, ext, secure: _s2sConfig.secure };
+      const imp = {id: adUnit.code, ext, secure: _s2sConfig.secure};
 
-      if (banner) { imp.banner = banner; }
-      if (video) { imp.video = video; }
+      if (banner) {
+        imp.banner = banner;
+      }
+      if (video) {
+        imp.video = video;
+      }
 
       imps.push(imp);
     });
@@ -453,7 +461,7 @@ const OPEN_RTB_PROTOCOL = {
 
     const digiTrust = _getDigiTrustQueryParams();
     if (digiTrust) {
-      request.user = { ext: { digitrust: digiTrust } };
+      request.user = {ext: {digitrust: digiTrust}};
     }
 
     return request;
@@ -481,7 +489,9 @@ const OPEN_RTB_PROTOCOL = {
 
           if (utils.deepAccess(bid, 'ext.prebid.type') === VIDEO) {
             bidObject.mediaType = VIDEO;
-            if (bid.adm) { bidObject.vastXml = bid.adm; }
+            if (bid.adm) {
+              bidObject.vastXml = bid.adm;
+            }
           } else { // banner
             if (bid.adm && bid.nurl) {
               bidObject.ad = bid.adm;
@@ -495,7 +505,9 @@ const OPEN_RTB_PROTOCOL = {
 
           bidObject.width = bid.w;
           bidObject.height = bid.h;
-          if (bid.dealid) { bidObject.dealId = bid.dealid; }
+          if (bid.dealid) {
+            bidObject.dealId = bid.dealid;
+          }
           bidObject.requestId = bid.id;
           bidObject.creative_id = bid.crid;
           bidObject.creativeId = bid.crid;
@@ -505,7 +517,7 @@ const OPEN_RTB_PROTOCOL = {
           bidObject.currency = (bid.currency) ? bid.currency : DEFAULT_S2S_CURRENCY;
           bidObject.netRevenue = (bid.netRevenue) ? bid.netRevenue : DEFAULT_S2S_NETREVENUE;
 
-          bids.push({ adUnit: bid.impid, bid: bidObject });
+          bids.push({adUnit: bid.impid, bid: bidObject});
         });
       });
     }
@@ -542,7 +554,7 @@ export function PrebidServer() {
   const baseAdapter = new Adapter('prebidServer');
 
   /* Prebid executes this function when the page asks to send out bid requests */
-  baseAdapter.callBids = function(s2sBidRequest, bidRequests, addBidResponse, done, ajax) {
+  baseAdapter.callBids = function (s2sBidRequest, bidRequests, addBidResponse, done, ajax) {
     const adUnits = utils.deepClone(s2sBidRequest.ad_units);
 
     convertTypes(adUnits);
@@ -563,7 +575,7 @@ export function PrebidServer() {
       _s2sConfig.endpoint,
       response => handleResponse(response, requestedBidders, bidRequests, addBidResponse, done),
       requestJson,
-      { contentType: 'text/plain', withCredentials: true }
+      {contentType: 'text/plain', withCredentials: true}
     );
   };
 
