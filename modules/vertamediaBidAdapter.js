@@ -1,8 +1,8 @@
-import * as utils from 'src/utils';
-import {registerBidder} from 'src/adapters/bidderFactory';
-import {VIDEO, BANNER} from 'src/mediaTypes';
-import {Renderer} from 'src/Renderer';
-import findIndex from 'core-js/library/fn/array/find-index';
+import * as utils from "src/utils";
+import {registerBidder} from "src/adapters/bidderFactory";
+import {VIDEO, BANNER} from "src/mediaTypes";
+import {Renderer} from "src/Renderer";
+import findIndex from "core-js/library/fn/array/find-index";
 
 
 const URL = '//hb.adtelligent.com/auction/';
@@ -18,7 +18,35 @@ export const spec = {
   isBidRequestValid: function (bid) {
     return bid && bid.params && bid.params.aid;
   },
+  getUserSyncs: function (syncOptions, serverResponses) {
+    var syncs = [];
 
+    function addSyncs(_s) {
+      if (_s && _s.length) {
+        _s.forEach(s => {
+          syncs.push({
+            type: 'image',
+            url: s
+          })
+        })
+      }
+    }
+
+    if (syncOptions.pixelEnabled) {
+      serverResponses && serverResponses.length && serverResponses.forEach((response) => {
+        if (response.body) {
+          if (utils.isArray(response.body)) {
+            response.body.forEach(b => {
+              addSyncs(b.cookieURLs);
+            })
+          } else {
+            addSyncs(response.body.cookieURLs)
+          }
+        }
+      })
+    }
+    return syncs;
+  },
   /**
    * Make a server request from the list of BidRequests
    * @param bidRequests
