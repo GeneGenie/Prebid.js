@@ -6,7 +6,7 @@ import findIndex from "core-js/library/fn/array/find-index";
 
 
 const URL = '//hb.adtelligent.com/auction/';
-const OUTSTREAM_SRC = '//player.vertamedia.com/outstream-unit/2.01/outstream.min.js';
+const OUTSTREAM_SRC = '//player.adtelligent.com/outstream-unit/2.11/outstream-unit.min.js';
 const BIDDER_CODE = 'vertamedia';
 const OUTSTREAM = 'outstream';
 const DISPLAY = 'display';
@@ -103,7 +103,7 @@ function parseRTBResponse(serverResponse, bidderRequest) {
     });
 
     if (serverBid.cpm !== 0 && requestId !== -1) {
-      const bid = createBid(serverBid, getMediaType(bidderRequest.bids[requestId]));
+      const bid = createBid(serverBid, bidderRequest.bids[requestId]);
 
       bids.push(bid);
     }
@@ -157,10 +157,11 @@ function getMediaType(bidderRequest) {
 /**
  * Configure new bid by response
  * @param bidResponse {object}
- * @param mediaType {Object}
+ * @param bidReq {Object}
  * @returns {object}
  */
-function createBid(bidResponse, mediaType) {
+function createBid(bidResponse, bidReq) {
+  let mediaType =  getMediaType(bidReq);
   let bid = {
     requestId: bidResponse.requestId,
     creativeId: bidResponse.cmpId,
@@ -170,6 +171,7 @@ function createBid(bidResponse, mediaType) {
     cpm: bidResponse.cpm,
     netRevenue: true,
     mediaType,
+    params: bidReq.params,
     ttl: 3600
   };
 
@@ -187,7 +189,7 @@ function createBid(bidResponse, mediaType) {
     Object.assign(bid, {
       mediaType: 'video',
       adResponse: bidResponse,
-      renderer: newRenderer(bidResponse.requestId)
+      renderer: newRenderer(bidResponse)
     });
   }
 
@@ -196,12 +198,12 @@ function createBid(bidResponse, mediaType) {
 
 /**
  * Create Vertamedia renderer
- * @param requestId
+ * @param bidResponse {object}
  * @returns {*}
  */
-function newRenderer(requestId) {
+function newRenderer(bidResponse) {
   const renderer = Renderer.install({
-    id: requestId,
+    id: bidResponse.requestId,
     url: OUTSTREAM_SRC,
     loaded: false
   });
@@ -221,7 +223,13 @@ function outstreamRender(bid) {
       width: bid.width,
       height: bid.height,
       vastUrl: bid.vastUrl,
-      elId: bid.adUnitCode
+      elId: bid.adUnitCode,
+      type: bid.params.type,
+      audio_setting: bid.params.audio_setting,
+      default_volume: bid.params.default_volume,
+      video_controls: bid.params.video_controls,
+      close_button_options: bid.params.close_button_options,
+      view_out_action: bid.params.view_out_action
     }]);
   });
 }
