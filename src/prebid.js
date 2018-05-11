@@ -1,15 +1,15 @@
 /** @module pbjs */
 
-import { getGlobal } from './prebidGlobal';
-import { flatten, uniques, isGptPubadsDefined, adUnitsFilter, removeRequestId } from './utils';
-import { listenMessagesFromCreative } from './secureCreatives';
-import { userSync } from 'src/userSync.js';
-import { loadScript } from './adloader';
-import { config } from './config';
-import { auctionManager } from './auctionManager';
-import { targeting } from './targeting';
-import { createHook } from 'src/hook';
-import includes from 'core-js/library/fn/array/includes';
+import {getGlobal} from "./prebidGlobal";
+import {flatten, uniques, isGptPubadsDefined, adUnitsFilter, removeRequestId} from "./utils";
+import {listenMessagesFromCreative} from "./secureCreatives";
+import {userSync} from "src/userSync.js";
+import {loadScript} from "./adloader";
+import {config} from "./config";
+import {auctionManager} from "./auctionManager";
+import {targeting} from "./targeting";
+import {createHook} from "src/hook";
+import includes from "core-js/library/fn/array/includes";
 
 var $$PREBID_GLOBAL$$ = getGlobal();
 
@@ -18,13 +18,13 @@ var utils = require('./utils.js');
 var adaptermanager = require('./adaptermanager');
 var bidfactory = require('./bidfactory');
 var events = require('./events');
-const { triggerUserSyncs } = userSync;
+const {triggerUserSyncs} = userSync;
 
 /* private variables */
 
 const RENDERED = 'rendered';
-const { ADD_AD_UNITS, BID_WON, REQUEST_BIDS, SET_TARGETING, AD_RENDER_FAILED } = CONSTANTS.EVENTS;
-const { PREVENT_WRITING_ON_MAIN_DOCUMENT, NO_AD, EXCEPTION, CANNOT_FIND_AD, MISSING_DOC_OR_ADID } = CONSTANTS.AD_RENDER_FAILED_REASON;
+const {ADD_AD_UNITS, BID_WON, REQUEST_BIDS, SET_TARGETING, AD_RENDER_FAILED} = CONSTANTS.EVENTS;
+const {PREVENT_WRITING_ON_MAIN_DOCUMENT, NO_AD, EXCEPTION, CANNOT_FIND_AD, MISSING_DOC_OR_ADID} = CONSTANTS.AD_RENDER_FAILED_REASON;
 
 var eventValidators = {
   bidWon: checkDefinedPlacement
@@ -99,7 +99,7 @@ $$PREBID_GLOBAL$$.getAdserverTargetingForAdUnitCodeStr = function (adunitCode) {
  * @alias module:pbjs.getAdserverTargetingForAdUnitCode
  * @returns {Object}  returnObj return bids
  */
-$$PREBID_GLOBAL$$.getAdserverTargetingForAdUnitCode = function(adUnitCode) {
+$$PREBID_GLOBAL$$.getAdserverTargetingForAdUnitCode = function (adUnitCode) {
   return $$PREBID_GLOBAL$$.getAdserverTargeting(adUnitCode)[adUnitCode];
 };
 
@@ -135,7 +135,7 @@ $$PREBID_GLOBAL$$.getBidResponses = function () {
     .filter(bids => bids && bids[0] && bids[0].adUnitCode)
     .map(bids => {
       return {
-        [bids[0].adUnitCode]: { bids: bids.map(removeRequestId) }
+        [bids[0].adUnitCode]: {bids: bids.map(removeRequestId)}
       };
     })
     .reduce((a, b) => Object.assign(a, b), {});
@@ -184,7 +184,7 @@ $$PREBID_GLOBAL$$.setTargetingForGPTAsync = function (adUnit) {
  * Set query string targeting on all AST (AppNexus Seller Tag) ad units. Note that this function has to be called after all ad units on page are defined. For working example code, see [Using Prebid.js with AppNexus Publisher Ad Server](http://prebid.org/dev-docs/examples/use-prebid-with-appnexus-ad-server.html).
  * @alias module:pbjs.setTargetingForAst
  */
-$$PREBID_GLOBAL$$.setTargetingForAst = function() {
+$$PREBID_GLOBAL$$.setTargetingForAst = function () {
   utils.logInfo('Invoking $$PREBID_GLOBAL$$.setTargetingForAn', arguments);
   if (!targeting.isApntagDefined()) {
     utils.logError('window.apntag is not defined on the page');
@@ -209,14 +209,33 @@ function emitAdRenderFail(reason, message, bid) {
   utils.logError(message);
   events.emit(AD_RENDER_FAILED, data);
 }
+
+$$PREBID_GLOBAL$$.renderVMOutstreamAd = function (bid, outstreamId) {
+  //todo  adunit remap into divid
+  googletag.cmd.push(function () {
+    var slots = googletag.pubads().getSlots();
+    for (var i = 0; i < slots.length; i++) {
+      if (slots[i].getAdUnitPath() == bid.adUnitCode || slots[i].getSlotElementId() == bid.adUnitCode) {
+        bid.status = 'targetingSet';
+        var el = document.getElementById(slots[i].getSlotElementId());
+        var s = document.createElement('script');
+        s.src = `//player.adtelligent.com/outstream-unit/pbmp2/pb.outstream-unit.loader.min.js?pb_outstream_id=${outstreamId}`
+        s.setAttribute('data-pb-outstream-id',outstreamId);
+        el.appendChild(s);
+      }
+    }
+  });
+};
+
 /**
  * This function will render the ad (based on params) in the given iframe document passed through.
  * Note that doc SHOULD NOT be the parent document page as we can't doc.write() asynchronously
  * @param  {HTMLDocument} doc document
  * @param  {string} id bid id to locate the ad
+ * @param {string} VmOutstream is special render by VM
  * @alias module:pbjs.renderAd
  */
-$$PREBID_GLOBAL$$.renderAd = function (doc, id) {
+$$PREBID_GLOBAL$$.renderAd = function (doc, id, VmOutstream) {
   utils.logInfo('Invoking $$PREBID_GLOBAL$$.renderAd', arguments);
   utils.logMessage('Calling renderAd with adId :' + id);
 
@@ -235,12 +254,13 @@ $$PREBID_GLOBAL$$.renderAd = function (doc, id) {
         // emit 'bid won' event here
         events.emit(BID_WON, bid);
 
-        const { height, width, ad, mediaType, adUrl, renderer } = bid;
+        const {height, width, ad, mediaType, adUrl, renderer} = bid;
 
         const creativeComment = document.createComment(`Creative ${bid.creativeId} served by ${bid.bidder} Prebid.js Header Bidding`);
         utils.insertElement(creativeComment, doc, 'body');
-
-        if (renderer && renderer.url) {
+        if (VmOutstream != undefined && VmOutstream.length>0) {
+          pbjs.renderVMOutstreamAd(bid, VmOutstream)
+        } else if (renderer && renderer.url) {
           renderer.render(bid);
         } else if ((doc === document && !utils.inIframe()) || mediaType === 'video') {
           const message = `Error trying to write ad. Ad render call ad id ${id} was prevented from writing to the main document.`;
@@ -304,7 +324,7 @@ $$PREBID_GLOBAL$$.removeAdUnit = function (adUnitCode) {
  * @param {Array} requestOptions.labels
  * @alias module:pbjs.requestBids
  */
-$$PREBID_GLOBAL$$.requestBids = createHook('asyncSeries', function ({ bidsBackHandler, timeout, adUnits, adUnitCodes, labels } = {}) {
+$$PREBID_GLOBAL$$.requestBids = createHook('asyncSeries', function ({bidsBackHandler, timeout, adUnits, adUnitCodes, labels} = {}) {
   events.emit(REQUEST_BIDS);
   const cbTimeout = timeout || config.getConfig('bidderTimeout');
   adUnits = adUnits || $$PREBID_GLOBAL$$.adUnits;
@@ -554,12 +574,12 @@ $$PREBID_GLOBAL$$.aliasBidder = function (bidderCode, alias) {
  * @property {string} adserverTargeting.hb_adid The ad ID of the creative, as understood by the ad server.
  * @property {string} adserverTargeting.hb_pb The price paid to show the creative, as logged in the ad server.
  * @property {string} adserverTargeting.hb_bidder The winning bidder whose ad creative will be served by the ad server.
-*/
+ */
 
 /**
  * Get all of the bids that have won their respective auctions.  Useful for [troubleshooting your integration](http://prebid.org/dev-docs/prebid-troubleshooting-guide.html).
  * @return {Array<AdapterBidResponse>} A list of bids that have won their respective auctions.
-*/
+ */
 $$PREBID_GLOBAL$$.getAllWinningBids = function () {
   return auctionManager.getAllWinningBids()
     .map(removeRequestId);
@@ -655,7 +675,7 @@ $$PREBID_GLOBAL$$.que.push(() => listenMessagesFromCreative());
  *                            the Prebid script has been fully loaded.
  * @alias module:pbjs.cmd.push
  */
-$$PREBID_GLOBAL$$.cmd.push = function(command) {
+$$PREBID_GLOBAL$$.cmd.push = function (command) {
   if (typeof command === 'function') {
     try {
       command.call();
@@ -670,7 +690,7 @@ $$PREBID_GLOBAL$$.cmd.push = function(command) {
 $$PREBID_GLOBAL$$.que.push = $$PREBID_GLOBAL$$.cmd.push;
 
 function processQueue(queue) {
-  queue.forEach(function(cmd) {
+  queue.forEach(function (cmd) {
     if (typeof cmd.called === 'undefined') {
       try {
         cmd.call();
@@ -685,7 +705,7 @@ function processQueue(queue) {
 /**
  * @alias module:pbjs.processQueue
  */
-$$PREBID_GLOBAL$$.processQueue = function() {
+$$PREBID_GLOBAL$$.processQueue = function () {
   processQueue($$PREBID_GLOBAL$$.que);
   processQueue($$PREBID_GLOBAL$$.cmd);
 };
