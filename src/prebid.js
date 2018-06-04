@@ -1,15 +1,15 @@
 /** @module pbjs */
 
-import { getGlobal } from './prebidGlobal';
-import { flatten, uniques, isGptPubadsDefined, adUnitsFilter, removeRequestId } from './utils';
-import { listenMessagesFromCreative } from './secureCreatives';
-import { userSync } from 'src/userSync.js';
-import { loadScript } from './adloader';
-import { config } from './config';
-import { auctionManager } from './auctionManager';
-import { targeting, getOldestBid, RENDERED, BID_TARGETING_SET } from './targeting';
-import { createHook } from 'src/hook';
-import includes from 'core-js/library/fn/array/includes';
+import {getGlobal} from "./prebidGlobal";
+import {flatten, uniques, isGptPubadsDefined, adUnitsFilter, removeRequestId} from "./utils";
+import {listenMessagesFromCreative} from "./secureCreatives";
+import {userSync} from "src/userSync.js";
+import {loadScript} from "./adloader";
+import {config} from "./config";
+import {auctionManager} from "./auctionManager";
+import {targeting, getOldestBid, RENDERED, BID_TARGETING_SET} from "./targeting";
+import {createHook} from "src/hook";
+import includes from "core-js/library/fn/array/includes";
 
 const $$PREBID_GLOBAL$$ = getGlobal();
 const CONSTANTS = require('./constants.json');
@@ -17,11 +17,11 @@ const utils = require('./utils.js');
 const adaptermanager = require('./adaptermanager');
 const bidfactory = require('./bidfactory');
 const events = require('./events');
-const { triggerUserSyncs } = userSync;
+const {triggerUserSyncs} = userSync;
 
 /* private variables */
-const { ADD_AD_UNITS, BID_WON, REQUEST_BIDS, SET_TARGETING, AD_RENDER_FAILED } = CONSTANTS.EVENTS;
-const { PREVENT_WRITING_ON_MAIN_DOCUMENT, NO_AD, EXCEPTION, CANNOT_FIND_AD, MISSING_DOC_OR_ADID } = CONSTANTS.AD_RENDER_FAILED_REASON;
+const {ADD_AD_UNITS, BID_WON, REQUEST_BIDS, SET_TARGETING, AD_RENDER_FAILED} = CONSTANTS.EVENTS;
+const {PREVENT_WRITING_ON_MAIN_DOCUMENT, NO_AD, EXCEPTION, CANNOT_FIND_AD, MISSING_DOC_OR_ADID} = CONSTANTS.AD_RENDER_FAILED_REASON;
 
 const eventValidators = {
   bidWon: checkDefinedPlacement
@@ -133,7 +133,7 @@ $$PREBID_GLOBAL$$.getBidResponses = function () {
     .filter(bids => bids && bids[0] && bids[0].adUnitCode)
     .map(bids => {
       return {
-        [bids[0].adUnitCode]: { bids: bids.map(removeRequestId) }
+        [bids[0].adUnitCode]: {bids: bids.map(removeRequestId)}
       };
     })
     .reduce((a, b) => Object.assign(a, b), {});
@@ -208,18 +208,65 @@ function emitAdRenderFail(reason, message, bid) {
   events.emit(AD_RENDER_FAILED, data);
 }
 
+const VM_OUTSTREAM_SRC = '//player.adtelligent.com/outstream-unit/2.11/outstream-unit.min.js';
+let vmOutstreamScriptPromise;
 $$PREBID_GLOBAL$$.renderVMOutstreamAd = function (bid, outstreamId) {
-  //todo  adunit remap into divid
+  function startVmOutstream() {
+    bid.status = 'targetingSet';
+    var configs = config.getConfig('vmOutstreamConfigs') || {};
+    var unit = configs[outstreamId];
+    var cnf = unit.outstreamConfig;
+    if (!cnf) {
+      console.error('Outstream config not found');
+      return;
+    }
+
+    window.VOutstreamAPI.initOutstreams([{
+      width: bid.width,
+      height: bid.height,
+      elId: bid.adUnitCode,
+      vastUrl: pbjs.adServers.dfp.buildVideoUrl({
+        adUnit: unit,
+        bid: bid,
+        params: {
+          iu: unit.code
+        }
+      }),
+
+      type: cnf.type,
+      audio_setting: cnf.audio_setting,
+      default_volume: cnf.default_volume,
+      video_controls: cnf.video_controls,
+      close_button_options: cnf.close_button_options,
+      view_out_action: cnf.view_out_action
+    }]);
+  }
+
   googletag.cmd.push(function () {
     var slots = googletag.pubads().getSlots();
     for (var i = 0; i < slots.length; i++) {
       if (slots[i].getAdUnitPath() == bid.adUnitCode || slots[i].getSlotElementId() == bid.adUnitCode) {
-        bid.status = 'targetingSet';
-        var el = document.getElementById(slots[i].getSlotElementId());
-        var s = document.createElement('script');
-        s.src = `//player.adtelligent.com/outstream-unit/pbmp2/pb.outstream-unit.loader.min.js?pb_outstream_id=${outstreamId}`
-        s.setAttribute('data-pb-outstream-id', outstreamId);
-        el.appendChild(s);
+        if (!config.getConfig('vmOutstreamScriptLoaded')) {
+          config.setConfig({'vmOutstreamScriptLoaded': true})
+          vmOutstreamScriptPromise = new Promise((res, rej)=> {
+            var el = document.getElementById(slots[i].getSlotElementId());
+            var s = document.createElement('script');
+            s.onload = res;
+            s.onerror = function () {
+              rej();
+            };
+            s.src = VM_OUTSTREAM_SRC
+            //s.setAttribute('data-pb-outstream-id', outstreamId);
+            el.appendChild(s);
+          })
+        }
+        vmOutstreamScriptPromise.then(()=> {
+          startVmOutstream();
+        }).catch(()=> {
+          console.error('Failed to load outsream script');
+          config.setConfig('vmOutstreamScriptLoaded', false)
+        });
+        break;
       }
     }
   });
@@ -252,7 +299,7 @@ $$PREBID_GLOBAL$$.renderAd = function (doc, id, VmOutstream) {
         // emit 'bid won' event here
         events.emit(BID_WON, bid);
 
-        const { height, width, ad, mediaType, adUrl, renderer } = bid;
+        const {height, width, ad, mediaType, adUrl, renderer} = bid;
 
         const creativeComment = document.createComment(`Creative ${bid.creativeId} served by ${bid.bidder} Prebid.js Header Bidding`);
         utils.insertElement(creativeComment, doc, 'body');
@@ -322,7 +369,7 @@ $$PREBID_GLOBAL$$.removeAdUnit = function (adUnitCode) {
  * @param {Array} requestOptions.labels
  * @alias module:pbjs.requestBids
  */
-$$PREBID_GLOBAL$$.requestBids = createHook('asyncSeries', function ({ bidsBackHandler, timeout, adUnits, adUnitCodes, labels } = {}) {
+$$PREBID_GLOBAL$$.requestBids = createHook('asyncSeries', function ({bidsBackHandler, timeout, adUnits, adUnitCodes, labels} = {}) {
   events.emit(REQUEST_BIDS);
   const cbTimeout = timeout || config.getConfig('bidderTimeout');
   adUnits = adUnits || $$PREBID_GLOBAL$$.adUnits;
@@ -345,7 +392,7 @@ $$PREBID_GLOBAL$$.requestBids = createHook('asyncSeries', function ({ bidsBackHa
    */
   adUnits.forEach(adUnit => {
     // get the adunit's mediaTypes, defaulting to banner if mediaTypes isn't present
-    const adUnitMediaTypes = Object.keys(adUnit.mediaTypes || { 'banner': 'banner' });
+    const adUnitMediaTypes = Object.keys(adUnit.mediaTypes || {'banner': 'banner'});
 
     // get the bidder's mediaTypes
     const bidders = adUnit.bids.map(bid => bid.bidder);
@@ -380,7 +427,7 @@ $$PREBID_GLOBAL$$.requestBids = createHook('asyncSeries', function ({ bidsBackHa
     return;
   }
 
-  const auction = auctionManager.createAuction({ adUnits, adUnitCodes, callback: bidsBackHandler, cbTimeout, labels });
+  const auction = auctionManager.createAuction({adUnits, adUnitCodes, callback: bidsBackHandler, cbTimeout, labels});
   auction.callBids();
   return auction;
 });
@@ -577,7 +624,7 @@ $$PREBID_GLOBAL$$.aliasBidder = function (bidderCode, alias) {
 /**
  * Get all of the bids that have been rendered.  Useful for [troubleshooting your integration](http://prebid.org/dev-docs/prebid-troubleshooting-guide.html).
  * @return {Array<AdapterBidResponse>} A list of bids that have been rendered.
-*/
+ */
 $$PREBID_GLOBAL$$.getAllWinningBids = function () {
   return auctionManager.getAllWinningBids()
     .map(removeRequestId);

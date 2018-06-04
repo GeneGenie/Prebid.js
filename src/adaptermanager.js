@@ -278,8 +278,8 @@ exports.callBids = (adUnits, bidRequests, addBidResponse, doneCb) => {
     utils.logWarn('callBids executed with no bidRequests.  Were they filtered by labels or sizing?');
     return;
   }
-
-  let ajax = ajaxBuilder(bidRequests[0].timeout);
+  const maxTimeout = bidRequests[0].timeout;
+  let ajax = ajaxBuilder(maxTimeout);
 
   let [clientBidRequests, serverBidRequests] = bidRequests.reduce((partitions, bidRequest) => {
     partitions[Number(typeof bidRequest.src !== 'undefined' && bidRequest.src === CONSTANTS.S2S.SRC)].push(bidRequest);
@@ -337,6 +337,7 @@ exports.callBids = (adUnits, bidRequests, addBidResponse, doneCb) => {
     }
   }
 
+  var timeoutConfigs = config.getConfig('vmTimeouts') || {};
   // handle client adapter requests
   clientBidRequests.forEach(bidRequest => {
     bidRequest.start = timestamp();
@@ -347,6 +348,8 @@ exports.callBids = (adUnits, bidRequests, addBidResponse, doneCb) => {
       events.emit(CONSTANTS.EVENTS.BID_REQUESTED, bidRequest);
       bidRequest.doneCbCallCount = 0;
       let done = doneCb(bidRequest.bidderRequestId);
+      let timeout = timeoutConfigs[bidRequest.bidderCode] || maxTimeout
+      let ajax = ajaxBuilder(timeout);
       adapter.callBids(bidRequest, addBidResponse, done, ajax);
     } else {
       utils.logError(`Adapter trying to be called which does not exist: ${bidRequest.bidderCode} adaptermanager.callBids`);
