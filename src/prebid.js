@@ -238,7 +238,19 @@ $$PREBID_GLOBAL$$.renderVMOutstreamAd = function (bid, outstreamId) {
       default_volume: cnf.default_volume,
       video_controls: cnf.video_controls,
       close_button_options: cnf.close_button_options,
-      view_out_action: cnf.view_out_action
+      view_out_action: cnf.view_out_action,
+
+      is_countdown_show: cnf.is_countdown_show,
+      percent_visible_before_show: cnf.percent_visible_before_show,
+      countdown_time: cnf.countdown_time,
+      close_button_delay: cnf.close_button_delay,
+      disengagement_delay: cnf.disengagement_delay,
+      disengagement_method: cnf.disengagement_method,
+      event_for_expand: cnf.event_for_expand,
+      detach_location_on_page: cnf.detach_location_on_page,
+      detach_width: cnf.detach_width,
+      detach_height: cnf.detach_height,
+      animation_mode: cnf.animation_mode
     }]);
   }
 
