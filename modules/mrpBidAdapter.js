@@ -7,7 +7,7 @@ import findIndex from "core-js/library/fn/array/find-index";
 
 const URL = '//hb.mrpadvisers.com/auction/';
 const OUTSTREAM_SRC = '//player.mrpadvisers.com/outstream-unit/2.11/outstream-unit.min.js';
-const BIDDER_CODE = 'vertamedia';
+const BIDDER_CODE = 'mrp';
 const OUTSTREAM = 'outstream';
 const DISPLAY = 'display';
 
@@ -197,7 +197,7 @@ function createBid(bidResponse, bidReq) {
 }
 
 /**
- * Create Vertamedia renderer
+ * Create renderer
  * @param bidResponse {object}
  * @returns {*}
  */
@@ -214,7 +214,7 @@ function newRenderer(bidResponse) {
 }
 
 /**
- * Initialise Vertamedia outstream
+ * Initialise outstream
  * @param bid
  */
 function outstreamRender(bid) {
