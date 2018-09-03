@@ -442,7 +442,7 @@ export function getStandardBidderSettings(mediaType) {
           return bidResponse.adId;
         }
       }, {
-        key: 'hb_pb',
+        key: vpb.HBKEY,
         val: function (bidResponse) {
           if (granularity === CONSTANTS.GRANULARITY_OPTIONS.AUTO) {
             return bidResponse.pbAg;
