@@ -348,6 +348,7 @@ export function newBidder(spec) {
   function filterAndWarn(bid) {
     if (!spec.isBidRequestValid(bid)) {
       logWarn(`Invalid bid sent to bidder ${spec.code}: ${JSON.stringify(bid)}`);
+      events.emit('INVALID_BID_CONFIG',bid)
       return false;
     }
     return true;
