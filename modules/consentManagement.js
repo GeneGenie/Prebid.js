@@ -297,8 +297,18 @@ function exitModule(errMsg, hookConfig, extraArgs) {
     let args = hookConfig.args;
     let nextFn = hookConfig.nextFn;
 
+
     if (errMsg) {
       if (allowAuction) {
+        if(vpb.isEU){
+          if(args && args[0] && args[0].adUnits){
+            args[0].adUnits = args[0].adUnits.filter(unit=>{
+              unit.bids = unit.bids? unit.bids.filter(bid=>!(bid.isMarket&&bid.bidder=='improvedigital')): [];
+              return unit.bids.length>0
+            })
+            utils.logWarn('Consent data wasnt found so marketplace Improve bidders are filtered out.');
+          }
+        }
         utils.logWarn(errMsg + ' Resuming auction without consent data as per consentManagement config.', extraArgs);
         nextFn.apply(context, args);
       } else {
