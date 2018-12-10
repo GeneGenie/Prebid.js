@@ -4,11 +4,11 @@
  * and make it available for any GDPR supported adapters to read/pass this information to
  * their system.
  */
-import * as utils from 'src/utils';
-import { config } from 'src/config';
-import { gdprDataHandler } from 'src/adaptermanager';
-import includes from 'core-js/library/fn/array/includes';
-import strIncludes from 'core-js/library/fn/string/includes';
+import * as utils from "src/utils";
+import {config} from "src/config";
+import {gdprDataHandler} from "src/adaptermanager";
+import includes from "core-js/library/fn/array/includes";
+import strIncludes from "core-js/library/fn/string/includes";
 
 const DEFAULT_CMP = 'iab';
 const DEFAULT_CONSENT_TIMEOUT = 10000;
@@ -44,11 +44,11 @@ function lookupIabConsent(cmpSuccess, cmpError, hookConfig) {
     }
 
     return {
-      consentDataCallback: function(consentResponse) {
+      consentDataCallback: function (consentResponse) {
         cmpResponse.getConsentData = consentResponse;
         afterEach();
       },
-      vendorConsentsCallback: function(consentResponse) {
+      vendorConsentsCallback: function (consentResponse) {
         cmpResponse.getVendorConsents = consentResponse;
         afterEach();
       }
@@ -70,7 +70,8 @@ function lookupIabConsent(cmpSuccess, cmpError, hookConfig) {
   // if the CMP is not found, the iframe function will call the cmpError exit callback to abort the rest of the CMP workflow
   try {
     cmpFunction = window.__cmp || utils.getWindowTop().__cmp;
-  } catch (e) {}
+  } catch (e) {
+  }
 
   if (utils.isFn(cmpFunction)) {
     cmpFunction('getConsentData', null, callbackHandler.consentDataCallback);
@@ -85,7 +86,8 @@ function lookupIabConsent(cmpSuccess, cmpError, hookConfig) {
     while (!cmpFrame) {
       try {
         if (f.frames['__cmpLocator']) cmpFrame = f;
-      } catch (e) {}
+      } catch (e) {
+      }
       if (f === window.top) break;
       f = f.parent;
     }
@@ -126,14 +128,16 @@ function lookupIabConsent(cmpSuccess, cmpError, hookConfig) {
 
   function callCmpWhileInIframe(commandName, cmpFrame, moduleCallback) {
     /* Setup up a __cmp function to do the postMessage and stash the callback.
-      This function behaves (from the caller's perspective identicially to the in-frame __cmp call */
-    window.__cmp = function(cmd, arg, callback) {
+     This function behaves (from the caller's perspective identicially to the in-frame __cmp call */
+    window.__cmp = function (cmd, arg, callback) {
       let callId = Math.random() + '';
-      let msg = {__cmpCall: {
-        command: cmd,
-        parameter: arg,
-        callId: callId
-      }};
+      let msg = {
+        __cmpCall: {
+          command: cmd,
+          parameter: arg,
+          callId: callId
+        }
+      };
       cmpCallbacks[callId] = callback;
       cmpFrame.postMessage(msg, '*');
     }
@@ -220,8 +224,7 @@ function processCmpData(consentObject, hookConfig) {
   let gdprApplies = consentObject && consentObject.getConsentData && consentObject.getConsentData.gdprApplies;
   if (
     (typeof gdprApplies !== 'boolean') ||
-    (gdprApplies === true &&
-      !(utils.isStr(consentObject.getConsentData.consentData) &&
+    (gdprApplies === true && !(utils.isStr(consentObject.getConsentData.consentData) &&
         utils.isPlainObject(consentObject.getVendorConsents) &&
         Object.keys(consentObject.getVendorConsents).length > 1
       )
@@ -248,7 +251,7 @@ function cmpTimedOut(hookConfig) {
  * @param {string} errMsg required; should be a short descriptive message for why the failure/issue happened.
  * @param {object} hookConfig contains module related variables (see comment in requestBidsHook function)
  * @param {object} extraArgs contains additional data that's passed along in the error/warning messages for easier debugging
-*/
+ */
 function cmpFailed(errMsg, hookConfig, extraArgs) {
   clearTimeout(hookConfig.timer);
 
@@ -300,15 +303,7 @@ function exitModule(errMsg, hookConfig, extraArgs) {
 
     if (errMsg) {
       if (allowAuction) {
-        if(vpb.isEU){
-          if(args && args[0] && args[0].adUnits){
-            args[0].adUnits = args[0].adUnits.filter(unit=>{
-              unit.bids = unit.bids? unit.bids.filter(bid=>!(bid.isMarket&&bid.bidder=='improvedigital')): [];
-              return unit.bids.length>0
-            })
-            utils.logWarn('Consent data wasnt found so marketplace Improve bidders are filtered out.');
-          }
-        }
+        args = IMPROVE_FILTER(args);
         utils.logWarn(errMsg + ' Resuming auction without consent data as per consentManagement config.', extraArgs);
         nextFn.apply(context, args);
       } else {
@@ -323,6 +318,21 @@ function exitModule(errMsg, hookConfig, extraArgs) {
       nextFn.apply(context, args);
     }
   }
+}
+
+function IMPROVE_FILTER(args) {
+  if (vpb.isEU) {
+    if (!consentData || !consentData.consentString) {
+      if (args && args[0] && args[0].adUnits) {
+        args[0].adUnits = args[0].adUnits.filter(unit=> {
+          unit.bids = unit.bids ? unit.bids.filter(bid=>!(bid.isMarket && bid.bidder == 'improvedigital')) : [];
+          return unit.bids.length > 0
+        });
+        utils.logWarn('Consent data wasnt found so marketplace Improve bidders are filtered out.');
+      }
+    }
+  }
+  return args;
 }
 
 /**
