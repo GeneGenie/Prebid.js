@@ -117,7 +117,7 @@ function getNormalizedBidRequest(bid) {
   let localSize = utils.getBidIdParameter('size', bid.params) || null;
   let bidId = utils.getBidIdParameter('bidId', bid);
   let transactionId = utils.getBidIdParameter('transactionId', bid);
-  const currency = config.getConfig('currency.adServerCurrency');
+  const currency = 'USD';
 
   let normalizedBidRequest = {};
   if (placementId) {
