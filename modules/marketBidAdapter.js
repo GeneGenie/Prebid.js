@@ -2,7 +2,7 @@ const adaptermanager = require('src/adaptermanager');
 
 const adapters = {
   adbutler: require('modules/adbutlerBidAdapter'),
-  getIntent: require('modules/getIntentBidAdapter')
+  getIntent: require('modules/getintentBidAdapter')
 };
 
 const marketConfig = [
@@ -23,7 +23,7 @@ var Market = function Market() {
         params.bids = params.bids.map(b=> {
           b.params = cnf.params
           return b;
-        })
+        });
         var adapter = adaptermanager.getBidAdapter(cnf.bidder);
         if (!adapter) {
           console.log('NO adapter ' + cnf.bidder);
