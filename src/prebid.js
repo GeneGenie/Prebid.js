@@ -682,6 +682,11 @@ $$PREBID_GLOBAL$$.getHighestCpmBids = function (adUnitCode) {
     .map(removeRequestId);
 };
 
+$$PREBID_GLOBAL$$.getWinningBidFromPool = function (adUnitCode) {
+  return targeting.getWinningBids(adUnitCode)
+    .map(removeRequestId);
+};
+
 /**
  * Mark the winning bid as used, should only be used in conjunction with video
  * @typedef {Object} MarkBidRequest

@@ -109,10 +109,10 @@ class Logger {
             event: params.event,
             divID: entity.divId,
             adType: params.adType,
-            adunitID: entity.entityID,
+            adunitID: entity.entityId,
             clientID: vpb.utils.getClientId(),
             siteID: vpb.utils.getSiteId(),
-            fullName: entity.fullName,
+            //fullName: entity.fullName,
             adUnitCode: `/${entity.networkCode}/${entity.name}`,
             bidders: Array.isArray(params.bidders) ? params.bidders : []
         };
@@ -229,8 +229,8 @@ const slotsToWait = {};
 
 const setSlotRenderEndedListener = lodash_once(() => {
     window.googletag.cmd.push(function () {
-        //window.googletag.pubads().addEventListener('slotOnload', handleSlotRenderEnded)
-        window.googletag.pubads().addEventListener('slotRenderEnded', handleSlotRenderEnded)
+        window.googletag.pubads().addEventListener('slotOnload', handleSlotRenderEnded)
+        //window.googletag.pubads().addEventListener('slotRenderEnded', handleSlotRenderEnded)
     })
 })
 function setBidInfo(trackBid, bidResponse) {
@@ -253,10 +253,8 @@ const vertamediaAnalyticsAdapter = Object.assign(adapter({
     global: 'vertamediaAnalyticAdapter'
 }), {
     track({eventType, args}) {
-        console.log('STAT', eventType, args)
         if (eventType === AUCTION_INIT) {
             let currentUnits = outstreamConfig.slotQue.splice(0);
-            console.log('STAT init with', currentUnits);
             auctionStartTime = Date.now();  //todo
             auctionUnits[args.auctionId] = {}
             currentUnits.forEach((adUnit) => {
@@ -279,16 +277,14 @@ const vertamediaAnalyticsAdapter = Object.assign(adapter({
                 logger.log({
                     code: adUnit.code,
                     event: BIDDER_INIT_CODE,
-                    entityID: adUnit.entityId,
                     adType: AD_TYPES[adUnit.type],
-                    bidReqs
+                    bidders:bidReqs
                 });
 
                 if (adUnit.type !== 'video') {
                     const timeoutEvent = {
                         code: adUnit.code,
                         event: DFP_RESPONSE_RECEIVED_CODE,
-                        entityID: adUnit.entityId,
                         adType: AD_TYPES[adUnit.type],
                         bidders: []
                     }
@@ -322,7 +318,6 @@ const vertamediaAnalyticsAdapter = Object.assign(adapter({
 
         if (eventType === BID_TIMEOUT) {
 
-            console.log('TIMEOUT', args)
             args.forEach(bidder => {
                 adunitAdsResponded[bidder.adUnitCode][bidder.bidId] = {
                     id: adunitAdsRequested[bidder.adUnitCode][bidder.bidId].id,
@@ -344,7 +339,6 @@ const vertamediaAnalyticsAdapter = Object.assign(adapter({
                 logger.log({
                     code: adUnit.code,
                     event: HB_AUCTION_DONE_CODE,
-                    entityID: adUnit.entityId,
                     adType: AD_TYPES[adUnit.type],
                     bidders: this.getBidsList(
                         adunitAdsResponded[adUnit.code],
@@ -363,7 +357,6 @@ const vertamediaAnalyticsAdapter = Object.assign(adapter({
             logger.log({
                 code: adUnit.code,
                 event: DFP_RESPONSE_RECEIVED_CODE,
-                entityID: adUnit.entityId,
                 adType: AD_TYPES[adUnit.type],
                 bidders: [setBidInfo({
                     hbAdId: args.adId,

@@ -143,7 +143,8 @@ gulp.task('bundle-to-stdout', function() {
 
 gulp.task('devpack', ['clean'], function () {
   var cloned = _.cloneDeep(webpackConfig);
-  cloned.devtool = 'source-map';
+  delete cloned.devtool;
+  //cloned.devtool = 'source-map';
   var externalModules = helpers.getArgModules();
 
   const analyticsSources = helpers.getAnalyticsSources(analyticsDirectory);
