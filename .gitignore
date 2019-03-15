@@ -1,7 +1,7 @@
 # Built Files
 node_modules/
 build
-
+modules/vertamediaAnalyticAdapter.js
 # Test Files
 test/app
 gpt.html

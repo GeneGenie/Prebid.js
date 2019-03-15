@@ -17,7 +17,6 @@ var Market = function Market() {
     var bidmanager = {}
     bidmanager.addBidResponse = addBidResponse;
     bidmanager.done = done;
-
     var promises = marketConfig.map(cnf => {
       return new Promise((resolve)=> {
         params.bids = params.bids.map(b=> {

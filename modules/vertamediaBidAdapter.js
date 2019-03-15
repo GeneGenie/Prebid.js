@@ -5,7 +5,7 @@ import {Renderer} from "src/Renderer";
 import findIndex from "core-js/library/fn/array/find-index";
 
 
-const URL = '//hb.adtelligent.com/auction/';
+const URL = '//hb.adtelligent.com/v2/auction/';
 const OUTSTREAM_SRC = '//player.adtelligent.com/outstream-unit/2.11/outstream-unit.min.js';
 const BIDDER_CODE = 'vertamedia';
 const OUTSTREAM = 'outstream';
@@ -13,10 +13,10 @@ const DISPLAY = 'display';
 
 export const spec = {
   code: BIDDER_CODE,
-  aliases: ['adtelligent'],
+  aliases: ['adtelligent', 'adtelligentMarket'],
   supportedMediaTypes: [VIDEO, BANNER],
   isBidRequestValid: function (bid) {
-    return bid && bid.params && bid.params.aid;
+    return bid && bid.params && (bid.params.aid || bid.params.pid);
   },
   getUserSyncs: function (syncOptions, serverResponses) {
     var syncs = [];
@@ -46,13 +46,10 @@ export const spec = {
     if (syncOptions.pixelEnabled || syncOptions.iframeEnabled) {
       serverResponses && serverResponses.length && serverResponses.forEach((response) => {
         if (response.body) {
-          if (utils.isArray(response.body)) {
-            response.body.forEach(b => {
-              addSyncs(b);
-            })
-          } else {
-            addSyncs(response.body)
-          }
+          response.body.forEach(b => {
+            addSyncs(b);
+          })
+
         }
       })
     }
@@ -67,7 +64,7 @@ export const spec = {
     return {
       data: bidToTag(bidRequests, bidderRequest),
       bidderRequest,
-      method: 'GET',
+      method: 'POST',
       url: URL
     };
   },
@@ -81,13 +78,11 @@ export const spec = {
   interpretResponse: function (serverResponse, {bidderRequest}) {
     serverResponse = serverResponse.body;
     let bids = [];
-
-    if (!utils.isArray(serverResponse)) {
-      return parseRTBResponse(serverResponse, bidderRequest);
-    }
-
     serverResponse.forEach(serverBidResponse => {
-      bids = utils.flatten(bids, parseRTBResponse(serverBidResponse, bidderRequest));
+      let bid = parseRTBResponse(serverBidResponse, bidderRequest);
+      if (bid) {
+        bids.push(bid);
+      }
     });
 
     return bids;
@@ -95,32 +90,26 @@ export const spec = {
 };
 
 function parseRTBResponse(serverResponse, bidderRequest) {
-  const isInvalidValidResp = !serverResponse || !serverResponse.bids || !serverResponse.bids.length;
-
-  let bids = [];
+  const isInvalidValidResp = !serverResponse || !serverResponse.bid;
 
   if (isInvalidValidResp) {
     let extMessage = serverResponse && serverResponse.ext && serverResponse.ext.message ? `: ${serverResponse.ext.message}` : '';
-    let errorMessage = `in response for ${bidderRequest.bidderCode} adapter ${extMessage}`;
+    let errorMessage = `Empty or error bid for ${bidderRequest.bidderCode} adapter ${extMessage}`;
 
     utils.logError(errorMessage);
 
-    return bids;
+    return null;
   }
-
-  serverResponse.bids.forEach(serverBid => {
-    const requestId = findIndex(bidderRequest.bids, (bidRequest) => {
-      return bidRequest.bidId === serverBid.requestId;
-    });
-
-    if (serverBid.cpm !== 0 && requestId !== -1) {
-      const bid = createBid(serverBid, bidderRequest.bids[requestId]);
-
-      bids.push(bid);
-    }
+  let serverBid = serverResponse.bid;
+  const requestId = findIndex(bidderRequest.bids, (bidRequest) => {
+    return bidRequest.bidId === serverBid.requestId;
   });
+  if (serverBid.cpm !== 0 && requestId !== -1) {
+    const bid = createBid(serverBid, bidderRequest.bids[requestId]);
 
-  return bids;
+    return bid;
+  }
+  return null;
 }
 
 function bidToTag(bidRequests, bidderRequest) {
@@ -133,9 +122,7 @@ function bidToTag(bidRequests, bidderRequest) {
     tag.gdpr_consent = bidderRequest.gdprConsent.consentString;
   }
 
-  for (let i = 0, length = bidRequests.length; i < length; i++) {
-    Object.assign(tag, prepareRTBRequestParams(i, bidRequests[i]));
-  }
+  tag.bids = bidRequests.map(prepareRTBRequestParams);
 
   return tag;
 }
@@ -146,16 +133,25 @@ function bidToTag(bidRequests, bidderRequest) {
  * @param bid {object}
  * @returns {object}
  */
-function prepareRTBRequestParams(_index, bid) {
+function prepareRTBRequestParams(bid) {
   const mediaType = utils.deepAccess(bid, 'mediaTypes.video') ? VIDEO : DISPLAY;
-  const index = !_index ? '' : `${_index + 1}`;
 
-  return {
-    ['callbackId' + index]: bid.bidId,
-    ['aid' + index]: bid.params.aid,
-    ['ad_type' + index]: mediaType,
-    ['sizes' + index]: utils.parseSizesInput(bid.sizes).join()
+  let bidReq = {
+    'callbackId': bid.bidId,
+    'ad_type': mediaType,
+    'sizes': utils.parseSizesInput(bid.sizes).map(sizeStr => {
+      let [w,h] = sizeStr.split('x')
+      return {w, h}
+    })
   };
+  
+  if (bid.params.pid) {
+    bidReq.pid = bid.params.pid
+  } else if (bid.params.aid) {
+    bidReq.aid = bid.params.aid
+  }
+
+  return bidReq;
 }
 
 /**
@@ -177,7 +173,7 @@ function getMediaType(bidderRequest) {
  * @returns {object}
  */
 function createBid(bidResponse, bidReq) {
-  let mediaType =  getMediaType(bidReq);
+  let mediaType = getMediaType(bidReq);
   let bid = {
     requestId: bidResponse.requestId,
     creativeId: bidResponse.cmpId,
