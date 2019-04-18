@@ -135,6 +135,7 @@ export const spec = {
           bidResponses.push(bid);
           return bidResponses;
         }
+        delete bidResponse.adId;
         bidResponse.placementCode = placementCode;
         bidResponse.size = bidRequest.sizes;
         bidResponse.creativeId = bidderBid.id;
