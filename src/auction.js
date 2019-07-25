@@ -668,7 +668,8 @@ export function adjustBids(bid) {
     }
     if (bidCpmAdjustment) {
       try {
-        bidPriceAdjusted = bidCpmAdjustment(bid.cpm, Object.assign({}, bid));
+        //@adtelligent
+        bidPriceAdjusted = bidCpmAdjustment(bid.cpm,bid);
       } catch (e) {
         utils.logError('Error during bid adjustment', 'bidmanager.js', e);
       }

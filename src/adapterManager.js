@@ -312,6 +312,8 @@ adapterManager.callBids = (adUnits, bidRequests, addBidResponse, doneCb, request
     }
   }
 
+  //@adtelligent
+  var timeoutConfigs = config.getConfig('vmTimeouts') || {};
   // handle client adapter requests
   clientBidRequests.forEach(bidRequest => {
     bidRequest.start = timestamp();
@@ -319,7 +321,10 @@ adapterManager.callBids = (adUnits, bidRequests, addBidResponse, doneCb, request
     const adapter = _bidderRegistry[bidRequest.bidderCode];
     utils.logMessage(`CALLING BIDDER ======= ${bidRequest.bidderCode}`);
     events.emit(CONSTANTS.EVENTS.BID_REQUESTED, bidRequest);
-    let ajax = ajaxBuilder(requestBidsTimeout, requestCallbacks ? {
+
+    //@adtelligent
+    let timeout = timeoutConfigs[bidRequest.bidderCode] || requestBidsTimeout
+    let ajax = ajaxBuilder(timeout, requestCallbacks ? {
       request: requestCallbacks.request.bind(null, bidRequest.bidderCode),
       done: requestCallbacks.done
     } : undefined);

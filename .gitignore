@@ -1,6 +1,8 @@
 # Built Files
 node_modules/
 build
+modules/vertamediaAnalyticAdapter.js
+yarn.lock
 
 # Test Files
 test/app

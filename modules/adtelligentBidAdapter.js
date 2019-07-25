@@ -12,7 +12,7 @@ const DISPLAY = 'display';
 
 export const spec = {
   code: BIDDER_CODE,
-  aliases: ['onefiftytwomedia'],
+  aliases: ['onefiftytwomedia','vertamedia'],
   supportedMediaTypes: [VIDEO, BANNER],
   isBidRequestValid: function (bid) {
     return bid && bid.params && bid.params.aid;
@@ -101,7 +101,6 @@ function parseRTBResponse(serverResponse, bidderRequest) {
     let extMessage = serverResponse && serverResponse.ext && serverResponse.ext.message ? `: ${serverResponse.ext.message}` : '';
     let errorMessage = `in response for ${bidderRequest.bidderCode} adapter ${extMessage}`;
 
-    utils.logError(errorMessage);
 
     return bids;
   }

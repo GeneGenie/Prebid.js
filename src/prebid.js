@@ -288,6 +288,84 @@ function emitAdRenderFail(reason, message, bid) {
   utils.logError(message);
   events.emit(AD_RENDER_FAILED, data);
 }
+
+//@adtelligent
+const VM_OUTSTREAM_SRC = '//player.adtelligent.com/outstream-unit/2.11/outstream-unit.min.js';
+let vmOutstreamScriptPromise;
+$$PREBID_GLOBAL$$.renderVMOutstreamAd = function (bid, outstreamId) {
+  function startVmOutstream() {
+    bid.status = 'targetingSet';
+    var configs = config.getConfig('vmOutstreamConfigs') || {};
+    var unit = configs[outstreamId];
+    var cnf = unit.outstreamConfig;
+    if (!cnf) {
+      console.error('Outstream config not found');
+      return;
+    }
+
+    window.VOutstreamAPI.initOutstreams([{
+      width: bid.width,
+      height: bid.height,
+      elId: bid.adUnitCode,
+      vastUrl: pbjs.adServers.dfp.buildVideoUrl({
+        adUnit: unit,
+        bid: bid,
+        params: {
+          iu: unit.code
+        }
+      }),
+
+      type: cnf.type,
+      audio_setting: cnf.audio_setting,
+      default_volume: cnf.default_volume,
+      video_controls: cnf.video_controls,
+      close_button_options: cnf.close_button_options,
+      view_out_action: cnf.view_out_action,
+
+      is_countdown_show: cnf.is_countdown_show,
+      percent_visible_before_show: cnf.percent_visible_before_show,
+      countdown_time: cnf.countdown_time,
+      close_button_delay: cnf.close_button_delay,
+      disengagement_delay: cnf.disengagement_delay,
+      disengagement_method: cnf.disengagement_method,
+      event_for_expand: cnf.event_for_expand,
+      detach_location_on_page: cnf.detach_location_on_page,
+      detach_width: cnf.detach_width,
+      detach_height: cnf.detach_height,
+      animation_mode: cnf.animation_mode
+    }]);
+  }
+
+  googletag.cmd.push(function () {
+    var slots = googletag.pubads().getSlots();
+    for (var i = 0; i < slots.length; i++) {
+      if (slots[i].getAdUnitPath() == bid.adUnitCode || slots[i].getSlotElementId() == bid.adUnitCode) {
+        if (!config.getConfig('vmOutstreamScriptLoaded')) {
+          config.setConfig({'vmOutstreamScriptLoaded': true})
+          vmOutstreamScriptPromise = new Promise((res, rej)=> {
+            var el = document.getElementById(slots[i].getSlotElementId());
+            var s = document.createElement('script');
+            s.onload = res;
+            s.onerror = function () {
+              rej();
+            };
+            s.src = VM_OUTSTREAM_SRC
+            //s.setAttribute('data-pb-outstream-id', outstreamId);
+            el.appendChild(s);
+          })
+        }
+        vmOutstreamScriptPromise.then(()=> {
+          startVmOutstream();
+        }).catch(()=> {
+          console.error('Failed to load outsream script');
+          config.setConfig('vmOutstreamScriptLoaded', false)
+        });
+        break;
+      }
+    }
+  });
+};
+
 /**
  * This function will render the ad (based on params) in the given iframe document passed through.
  * Note that doc SHOULD NOT be the parent document page as we can't doc.write() asynchronously
@@ -295,7 +373,7 @@ function emitAdRenderFail(reason, message, bid) {
  * @param  {string} id bid id to locate the ad
  * @alias module:pbjs.renderAd
  */
-$$PREBID_GLOBAL$$.renderAd = function (doc, id) {
+$$PREBID_GLOBAL$$.renderAd = function (doc, id, VmOutstream) {
   utils.logInfo('Invoking $$PREBID_GLOBAL$$.renderAd', arguments);
   utils.logMessage('Calling renderAd with adId :' + id);
 
@@ -318,8 +396,9 @@ $$PREBID_GLOBAL$$.renderAd = function (doc, id) {
 
         const creativeComment = document.createComment(`Creative ${bid.creativeId} served by ${bid.bidder} Prebid.js Header Bidding`);
         utils.insertElement(creativeComment, doc, 'body');
-
-        if (isRendererRequired(renderer)) {
+        if (VmOutstream != undefined && VmOutstream.length > 0) {
+          pbjs.renderVMOutstreamAd(bid, VmOutstream)
+        } else  if (isRendererRequired(renderer)) {
           executeRenderer(renderer, bid);
         } else if ((doc === document && !utils.inIframe()) || mediaType === 'video') {
           const message = `Error trying to write ad. Ad render call ad id ${id} was prevented from writing to the main document.`;
@@ -700,6 +779,11 @@ $$PREBID_GLOBAL$$.getAllPrebidWinningBids = function () {
 $$PREBID_GLOBAL$$.getHighestCpmBids = function (adUnitCode) {
   let bidsReceived = getHighestCpmBidsFromBidPool(auctionManager.getBidsReceived(), getLatestHighestCpmBid);
   return targeting.getWinningBids(adUnitCode, bidsReceived);
+};
+
+//@adtelligent
+$$PREBID_GLOBAL$$.getWinningBidFromPool = function (adUnitCode) {
+  return targeting.getWinningBids(adUnitCode);
 };
 
 /**
