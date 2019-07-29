@@ -140,7 +140,8 @@ export function newTargeting(auctionManager) {
     // Get targeting for the winning bid. Add targeting for any bids that have
     // `alwaysUseBid=true`. If sending all bids is enabled, add targeting for losing bids.
     var targeting = getWinningBidTargeting(adUnitCodes, bidsReceived)
-      .concat(getCustomBidTargeting(adUnitCodes, bidsReceived))
+      //@adtelligent
+      //.concat(getCustomBidTargeting(adUnitCodes, bidsReceived))
       .concat(config.getConfig('enableSendAllBids') ? getBidLandscapeTargeting(adUnitCodes, bidsReceived) : []);
 
     // store a reference of the targeting keys
