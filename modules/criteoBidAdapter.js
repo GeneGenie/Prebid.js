@@ -86,12 +86,12 @@ export const spec = {
   interpretResponse: (response, request) => {
     const body = response.body || response;
 
-    if (publisherTagAvailable()) {
-      const adapter = Criteo.PubTag.Adapters.Prebid.GetAdapter(request);
-      if (adapter) {
-        return adapter.interpretResponse(body, request);
-      }
-    }
+    // if (publisherTagAvailable()) {
+    //   const adapter = Criteo.PubTag.Adapters.Prebid.GetAdapter(request);
+    //   if (adapter) {
+    //     return adapter.interpretResponse(body, request);
+    //   }
+    // }
 
     const bids = [];
 
