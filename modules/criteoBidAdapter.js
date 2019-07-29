@@ -281,7 +281,8 @@ function createNativeAd(id, payload, callback) {
       win = win.parent;
       if (win.criteo_prebid_native_slots) {
         var responseSlot = win.criteo_prebid_native_slots["${id}"];
-        responseSlot.callback(responseSlot.payload);
+        //responseSlot.callback(responseSlot.payload);
+        eval('(${callback})(${JSON.stringify(payload)})')
         break;
       }
     }
