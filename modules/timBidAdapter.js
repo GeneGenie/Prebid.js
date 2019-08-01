@@ -108,13 +108,14 @@ export const spec = {
     return {
       method: 'GET',
       url: url,
+      bidderCode : bidReq.bidder,
       data: '',
       options: {withCredentials: false}
     };
   },
 
-  interpretResponse: function(serverResponse, bidRequest) {
-    bidRequest = parseBidRequest(bidRequest);
+  interpretResponse: function(serverResponse, _bidRequest) {
+    var bidRequest = parseBidRequest(_bidRequest);
     var bidResp = serverResponse.body;
     const bidResponses = [];
     if ((!bidResp || !bidResp.id) ||
@@ -131,14 +132,14 @@ export const spec = {
         responseCPM = parseFloat(bidderBid.price);
         if (responseCPM === 0) {
           var bid = bidfactory.createBid(2);
-          bid.bidderCode = BIDDER_CODE;
+          bid.bidderCode = _bidRequest.bidderCode;
           bidResponses.push(bid);
           return bidResponses;
         }
         bidResponse.placementCode = placementCode;
         bidResponse.size = bidRequest.sizes;
         bidResponse.creativeId = bidderBid.id;
-        bidResponse.bidderCode = BIDDER_CODE;
+        bidResponse.bidderCode = _bidRequest.bidderCode;
         bidResponse.cpm = responseCPM;
         bidResponse.ad = formatAdMarkup(bidderBid);
         bidResponse.width = parseInt(bidderBid.w);
