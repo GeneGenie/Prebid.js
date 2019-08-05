@@ -1,21 +1,22 @@
-import * as utils from '../src/utils';
-import {registerBidder} from '../src/adapters/bidderFactory';
-import {VIDEO, BANNER} from '../src/mediaTypes';
-import {Renderer} from '../src/Renderer';
-import findIndex from 'core-js/library/fn/array/find-index';
+import * as utils from "../src/utils";
+import {registerBidder} from "../src/adapters/bidderFactory";
+import {VIDEO, BANNER} from "../src/mediaTypes";
+import {Renderer} from "../src/Renderer";
+import findIndex from "core-js/library/fn/array/find-index";
 
-const URL = '//hb.adtelligent.com/auction/';
-const OUTSTREAM_SRC = '//player.adtelligent.com/outstream-unit/2.01/outstream.min.js';
+
+const URL = '//ghb.adtelligent.com/auction/';
+const OUTSTREAM_SRC = '//player.adtelligent.com/outstream-unit/2.11/outstream-unit.min.js';
 const BIDDER_CODE = 'adtelligent';
 const OUTSTREAM = 'outstream';
 const DISPLAY = 'display';
 
 export const spec = {
   code: BIDDER_CODE,
-  aliases: ['onefiftytwomedia','vertamedia'],
+  aliases: ['onefiftytwomedia', 'vertamedia', 'adtelligentMarket'],
   supportedMediaTypes: [VIDEO, BANNER],
   isBidRequestValid: function (bid) {
-    return bid && bid.params && bid.params.aid;
+    return bid && bid.params && (bid.params.pid || bid.params.aid);
   },
   getUserSyncs: function (syncOptions, serverResponses) {
     var syncs = [];
@@ -23,7 +24,7 @@ export const spec = {
     function addSyncs(bid) {
       const uris = bid.cookieURLs;
       const types = bid.cookieURLSTypes || [];
-
+      let uniqSyncs = {};
       if (uris && uris.length) {
         uris.forEach((uri, i) => {
           let type = types[i] || 'image';
@@ -32,11 +33,13 @@ export const spec = {
             (!syncOptions.iframeEnabled && type == 'iframe')) {
             return;
           }
-
-          syncs.push({
-            type: type,
-            url: uri
-          })
+          if (uniqSyncs[type + uri] == undefined) {
+            uniqSyncs[type + uri] = 1;
+            syncs.push({
+              type: type,
+              url: uri
+            })
+          }
         })
       }
     }
@@ -111,7 +114,7 @@ function parseRTBResponse(serverResponse, bidderRequest) {
     });
 
     if (serverBid.cpm !== 0 && requestId !== -1) {
-      const bid = createBid(serverBid, getMediaType(bidderRequest.bids[requestId]));
+      const bid = createBid(serverBid, bidderRequest.bids[requestId]);
 
       bids.push(bid);
     }
@@ -124,6 +127,10 @@ function bidToTag(bidRequests, bidderRequest) {
   let tag = {
     domain: utils.getTopWindowLocation().hostname
   };
+  if (window.vpb) {
+    tag.vpbv = vpb.VPB_VERSION;
+    tag.session_id = vpb.SESSION_ID;
+  }
 
   if (bidderRequest && bidderRequest.gdprConsent && bidderRequest.gdprConsent.gdprApplies) {
     tag.gdpr = 1;
@@ -146,13 +153,19 @@ function bidToTag(bidRequests, bidderRequest) {
 function prepareRTBRequestParams(_index, bid) {
   const mediaType = utils.deepAccess(bid, 'mediaTypes.video') ? VIDEO : DISPLAY;
   const index = !_index ? '' : `${_index + 1}`;
-
-  return {
+  let bidReq = {
     ['callbackId' + index]: bid.bidId,
-    ['aid' + index]: bid.params.aid,
     ['ad_type' + index]: mediaType,
-    ['sizes' + index]: utils.parseSizesInput(bid.sizes).join()
-  };
+    ['sizes' + index]: utils.parseSizesInput(bid.sizes).join(),
+    ['label_ids' + index]: bid.validLabelIds.join(),
+    ['override_id' + index]: bid.overrideId
+  }
+  if (bid.params.pid) {
+    bidReq['pid' + index] = bid.params.pid;
+  } else {
+    bidReq['aid' + index] = bid.params.aid;
+  }
+  return bidReq;
 }
 
 /**
@@ -170,10 +183,11 @@ function getMediaType(bidderRequest) {
 /**
  * Configure new bid by response
  * @param bidResponse {object}
- * @param mediaType {Object}
+ * @param bidReq {Object}
  * @returns {object}
  */
-function createBid(bidResponse, mediaType) {
+function createBid(bidResponse, bidReq) {
+  let mediaType = getMediaType(bidReq);
   let bid = {
     requestId: bidResponse.requestId,
     creativeId: bidResponse.cmpId,
@@ -183,6 +197,7 @@ function createBid(bidResponse, mediaType) {
     cpm: bidResponse.cpm,
     netRevenue: true,
     mediaType,
+    params: bidReq.params,
     ttl: 3600
   };
 
@@ -200,7 +215,7 @@ function createBid(bidResponse, mediaType) {
     Object.assign(bid, {
       mediaType: 'video',
       adResponse: bidResponse,
-      renderer: newRenderer(bidResponse.requestId)
+      renderer: newRenderer(bidResponse)
     });
   }
 
@@ -208,13 +223,13 @@ function createBid(bidResponse, mediaType) {
 }
 
 /**
- * Create Adtelligent renderer
- * @param requestId
+ * Create Vertamedia renderer
+ * @param bidResponse {object}
  * @returns {*}
  */
-function newRenderer(requestId) {
+function newRenderer(bidResponse) {
   const renderer = Renderer.install({
-    id: requestId,
+    id: bidResponse.requestId,
     url: OUTSTREAM_SRC,
     loaded: false
   });
@@ -225,7 +240,7 @@ function newRenderer(requestId) {
 }
 
 /**
- * Initialise Adtelligent outstream
+ * Initialise Vertamedia outstream
  * @param bid
  */
 function outstreamRender(bid) {
@@ -234,7 +249,13 @@ function outstreamRender(bid) {
       width: bid.width,
       height: bid.height,
       vastUrl: bid.vastUrl,
-      elId: bid.adUnitCode
+      elId: bid.adUnitCode,
+      type: bid.params.type,
+      audio_setting: bid.params.audio_setting,
+      default_volume: bid.params.default_volume,
+      video_controls: bid.params.video_controls,
+      close_button_options: bid.params.close_button_options,
+      view_out_action: bid.params.view_out_action
     }]);
   });
 }
