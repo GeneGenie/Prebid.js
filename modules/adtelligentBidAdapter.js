@@ -157,11 +157,13 @@ function prepareRTBRequestParams(_index, bid) {
     ['callbackId' + index]: bid.bidId,
     ['ad_type' + index]: mediaType,
     ['sizes' + index]: utils.parseSizesInput(bid.sizes).join(),
-    ['label_ids' + index]: bid.validLabelIds.join(),
-    ['override_id' + index]: bid.overrideId
+    ['label_ids' + index]: bid.validLabelIds.join()
+
   }
   if (bid.params.pid) {
     bidReq['pid' + index] = bid.params.pid;
+    bidReq['override_id' + index]= bid.overrideId;
+
   } else {
     bidReq['aid' + index] = bid.params.aid;
   }
