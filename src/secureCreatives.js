@@ -1,15 +1,15 @@
 /* Secure Creatives
-  Provides support for rendering creatives into cross domain iframes such as SafeFrame to prevent
-   access to a publisher page from creative payloads.
+ Provides support for rendering creatives into cross domain iframes such as SafeFrame to prevent
+ access to a publisher page from creative payloads.
  */
 
-import events from './events';
-import { fireNativeTrackers, getAssetMessage } from './native';
-import { EVENTS } from './constants';
-import { isSlotMatchingAdUnitCode, logWarn, replaceAuctionPrice } from './utils';
-import { auctionManager } from './auctionManager';
-import find from 'core-js/library/fn/array/find';
-import { isRendererRequired, executeRenderer } from './Renderer';
+import events from "./events";
+import {fireNativeTrackers, getAssetMessage} from "./native";
+import {EVENTS} from "./constants";
+import {isSlotMatchingAdUnitCode, logWarn, replaceAuctionPrice} from "./utils";
+import {auctionManager} from "./auctionManager";
+import find from "core-js/library/fn/array/find";
+import {isRendererRequired, executeRenderer} from "./Renderer";
 
 const BID_WON = EVENTS.BID_WON;
 
@@ -53,7 +53,9 @@ function receiveMessage(ev) {
       }
 
       const trackerType = fireNativeTrackers(data, adObject);
-      if (trackerType === 'click') { return; }
+      if (trackerType === 'click') {
+        return;
+      }
 
       auctionManager.addWinningBid(adObject);
       events.emit(BID_WON, adObject);
@@ -62,7 +64,7 @@ function receiveMessage(ev) {
 }
 
 export function _sendAdToCreative(adObject, remoteDomain, source) {
-  const { adId, ad, adUrl, width, height, renderer, cpm } = adObject;
+  const {adId, ad, adUrl, width, height, renderer, cpm} = adObject;
   // rendering for outstream safeframe
   if (isRendererRequired(renderer)) {
     executeRenderer(renderer, adObject);
@@ -79,7 +81,7 @@ export function _sendAdToCreative(adObject, remoteDomain, source) {
   }
 }
 
-function resizeRemoteCreative({ adUnitCode, width, height }) {
+function resizeRemoteCreative({adUnitCode, width, height}) {
   // resize both container div + iframe
   ['div:last-child', 'div:last-child iframe'].forEach(elmType => {
     let element = getElementByAdUnit(elmType);
@@ -93,7 +95,12 @@ function resizeRemoteCreative({ adUnitCode, width, height }) {
   });
 
   function getElementByAdUnit(elmType) {
-    let id = getElementIdBasedOnAdServer(adUnitCode);
+    let id = adUnitCode;
+    try {
+      id = getElementIdBasedOnAdServer(adUnitCode);
+    } catch (e) {
+      //@adtelligent
+    }
     let parentDivEle = document.getElementById(id);
     return parentDivEle && parentDivEle.querySelector(elmType);
   }
