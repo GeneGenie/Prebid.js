@@ -168,7 +168,7 @@ function prepareRTBRequestParams(_index, bid) {
     bidReq['aid' + index] = bid.params.aid;
   }
   if(bid.params.vpb_placement_id){
-    bidReq['placement_id'] = bid.params.vpb_placement_id;
+    bidReq['placement_id'+ index] = bid.params.vpb_placement_id;
   }
   return bidReq;
 }
