@@ -8,7 +8,7 @@ const DEFAULT_SIZE = [1, 1];
 export const sharethroughAdapterSpec = {
   code: BIDDER_CODE,
 
-  isBidRequestValid: bid => !!bid.params.pkey && bid.bidder === BIDDER_CODE,
+  isBidRequestValid: bid => !!bid.params.pkey,
 
   buildRequests: (bidRequests, bidderRequest) => {
     return bidRequests.map(bidRequest => {
